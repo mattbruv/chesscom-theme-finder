@@ -1,51 +1,62 @@
-import { useEffect, useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import { useState } from "react";
 import "./App.css";
+import {
+  getTheme,
+  getUserPopup,
+  type PopupResponse,
+  type Theme,
+} from "./types";
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [username, setUsername] = useState("");
+  const [theme, setTheme] = useState<Theme | null>(null);
+  const [user, setUser] = useState<PopupResponse | null>(null);
 
-  const [data, setData] = useState("");
+  function setInput(value: string) {
+    setUsername(value.trim());
+  }
 
-  // https://cors-anywhere.herokuapp.com/corsdemo
-  useEffect(() => {
-    const proxy = "https://cors-anywhere.herokuapp.com/";
+  async function onGetThemeClick() {
+    if (username.trim().length <= 0) return;
 
-    // target API (example: fetching from GitHub API)
-    const targetUrl =
-      "https://www.chess.com/rpc/chesscom.themes.v2.ThemesService/GetActiveTheme";
-
-    fetch(proxy + targetUrl, {
-      headers: {
-        accept: "application/json, text/plain, */*",
-        "accept-language": "en_US",
-        "connect-protocol-version": "1",
-        "content-type": "application/json",
-        priority: "u=1, i",
-        "sec-ch-ua":
-          '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"macOS"',
-      },
-      referrer: "https://www.chess.com/game/143936931234",
-      body: '{"platform":"PLATFORM_WEB","boardSize":200,"piecesSize":150,"userId":"16f9b24c-8ba8-11ed-9d3d-276131eb70f3"}',
-      method: "POST",
-    })
-      .then((res) => {
-        console.log(res);
-        return res.json();
-      })
-      .then((data) => {
-        console.log(data);
-        setData(JSON.stringify(data, null, 2));
-      })
-      .catch((err) => console.error(err));
-  }, []);
+    try {
+      const popup = await getUserPopup(username);
+      const result = await getTheme(popup.uuid);
+      setUser(popup);
+      setTheme(result.theme);
+    } catch (e) {
+      setUser(null);
+      setTheme(null);
+    }
+  }
 
   return (
     <>
-      <div>{data}</div>
+      <input value={username} onChange={(e) => setInput(e.target.value)} />
+      <button disabled={username.length == 0} onClick={onGetThemeClick}>
+        Get Theme
+      </button>
+      {user && theme ? (
+        <div>
+          <div>
+            <img style={{ width: 100 }} src={user.avatarUrl} />
+            <div>
+              {user.firstName} {user.lastName}
+              <div>Best Rating: {user.bestRating}</div>
+            </div>
+            <div>{user.countryName} </div>
+          </div>
+          <div>
+            <div>Piece set: {theme.pieceSet.name}</div>
+            <div>Board Style: {theme.boardStyle.name}</div>
+            <img
+              style={{ position: "absolute" }}
+              src={theme.pieceSet.previewImage.square}
+            />
+            <img src={theme.boardStyle.previewImage.square} />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
